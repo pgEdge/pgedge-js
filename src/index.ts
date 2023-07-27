@@ -69,6 +69,7 @@ function getNumber(value: number | string | undefined | unknown, defaultValue: n
 
 export interface BaseConnectOptions {
   location?: LocationSpec;
+  request?: any;
 }
 
 export interface EnvironmentConnectOptions extends BaseConnectOptions {
@@ -93,13 +94,17 @@ async function connect(opts: ConnectOptions): Promise<Client> {
   if (!Array.isArray(nodes) || nodes.length === 0) {
     throw new Error('invalid options: at least one node must be provided');
   }
-  let node = nodes[0];
+  // 38.88, -77.04 is Washington, DC, i.e. default to the us-east-1 area
+  let latitude = 38.88;
+  let longitude = -77.04;
   if (opts.location) {
-    // 38.88, -77.04 is Washington, DC, i.e. default to the us-east-1 area
-    const latitude = getNumber(opts.location.latitude, 38.88);
-    const longitude = getNumber(opts.location.longitude, -77.04);
-    node = getClosestNode(nodes, { latitude, longitude });
+    latitude = getNumber(opts.location.latitude, 38.88);
+    longitude = getNumber(opts.location.longitude, -77.04);
+  } else if (opts.request?.cf) {
+    latitude = getNumber(opts.request.cf.latitude, 38.88);
+    longitude = getNumber(opts.request.cf.longitude, -77.04);
   }
+  const node = getClosestNode(nodes, { latitude, longitude });
   const config = getClientConfig(node);
   const client = new Client(config);
   await client.connect();
