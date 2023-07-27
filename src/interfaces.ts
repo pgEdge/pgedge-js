@@ -15,8 +15,8 @@ interface Connection {
 }
 
 interface LocationSpec {
-  latitude: number | string | undefined;
-  longitude: number | string | undefined;
+  latitude: number | string | undefined | unknown;
+  longitude: number | string | undefined | unknown;
 }
 
 interface Location {
@@ -41,11 +41,4 @@ interface Env {
   PGEDGE_NODES: string;
 }
 
-interface Request {
-  cf?: {
-    latitude?: string;
-    longitude?: string;
-  };
-}
-
-export { Region, Connection, Location, LocationSpec, DatabaseNode, Env, Request };
+export { Region, Connection, Location, LocationSpec, DatabaseNode, Env };

@@ -1,5 +1,5 @@
 import { Client, ClientConfig } from 'pg';
-import { DatabaseNode, Location, LocationSpec, Env } from './interfaces';
+import { Region, Connection, Location, LocationSpec, DatabaseNode, Env } from './interfaces';
 
 function radians(degrees: number): number {
   return degrees * (Math.PI / 180);
@@ -58,7 +58,7 @@ function getClientConfig(node: DatabaseNode, opts?: ClientConfig): ClientConfig 
   };
 }
 
-function getNumber(value: number | string | undefined, defaultValue: number): number {
+function getNumber(value: number | string | undefined | unknown, defaultValue: number): number {
   if (typeof value === 'number') {
     return value;
   } else if (typeof value === 'string') {
@@ -106,4 +106,16 @@ async function connect(opts: ConnectOptions): Promise<Client> {
   return client;
 }
 
-export { connect, getNodes, getClosestNode, getClientConfig, haversineDistance };
+export {
+  connect,
+  getNodes,
+  getClosestNode,
+  getClientConfig,
+  haversineDistance,
+  Region,
+  Connection,
+  Location,
+  LocationSpec,
+  DatabaseNode,
+  Env,
+};
