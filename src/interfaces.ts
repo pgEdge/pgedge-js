@@ -14,15 +14,14 @@ interface Connection {
   external_ip_address: string;
 }
 
+interface LocationSpec {
+  latitude: number | string;
+  longitude: number | string;
+}
+
 interface Location {
   latitude: number;
   longitude: number;
-  city?: string;
-  code?: string;
-  country?: string;
-  name?: string;
-  region?: string;
-  region_code?: string;
 }
 
 interface DatabaseNode {
@@ -49,4 +48,4 @@ interface Request {
   };
 }
 
-export { Region, Connection, Location, DatabaseNode, Env, Request };
+export { Region, Connection, Location, LocationSpec, DatabaseNode, Env, Request };

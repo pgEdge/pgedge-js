@@ -1,5 +1,5 @@
 import { Client, ClientConfig } from 'pg';
-import { DatabaseNode, Location, Request, Env } from './interfaces';
+import { DatabaseNode, Location, LocationSpec, Env } from './interfaces';
 
 function radians(degrees: number): number {
   return degrees * (Math.PI / 180);
@@ -58,14 +58,47 @@ function getClientConfig(node: DatabaseNode, opts?: ClientConfig): ClientConfig 
   };
 }
 
-async function connect(request: Request, env: Env): Promise<Client> {
-  const nodes = getNodes(env);
+export interface BaseConnectOptions {
+  location?: LocationSpec;
+}
+
+export interface EnvironmentConnectOptions extends BaseConnectOptions {
+  env: Env;
+}
+
+export interface NodesConnectOptions extends BaseConnectOptions {
+  nodes: DatabaseNode[];
+}
+
+export type ConnectOptions = EnvironmentConnectOptions | NodesConnectOptions;
+
+async function connect(opts: ConnectOptions): Promise<Client> {
+  let nodes: DatabaseNode[] = [];
+  if ('env' in opts) {
+    nodes = getNodes(opts.env);
+  } else if ('nodes' in opts) {
+    nodes = opts.nodes;
+  } else {
+    throw new Error('invalid options: env or nodes must be provided');
+  }
+  if (!Array.isArray(nodes) || nodes.length === 0) {
+    throw new Error('invalid options: at least one node must be provided');
+  }
   let node = nodes[0];
-  if (request.cf && request.cf.latitude && request.cf.longitude) {
-    node = getClosestNode(nodes, {
-      latitude: parseFloat(request.cf.latitude as string),
-      longitude: parseFloat(request.cf.longitude as string),
-    });
+  if (opts.location) {
+    let latitude = 0.0;
+    let longitude = 0.0;
+    if (typeof opts.location.latitude === 'string') {
+      latitude = parseFloat(opts.location.latitude);
+    } else {
+      latitude = opts.location.latitude;
+    }
+    if (typeof opts.location.longitude === 'string') {
+      longitude = parseFloat(opts.location.longitude);
+    } else {
+      longitude = opts.location.longitude;
+    }
+    node = getClosestNode(nodes, { latitude, longitude });
   }
   const config = getClientConfig(node);
   const client = new Client(config);
