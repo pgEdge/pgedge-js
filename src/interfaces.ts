@@ -15,8 +15,8 @@ interface Connection {
 }
 
 interface LocationSpec {
-  latitude: number | string;
-  longitude: number | string;
+  latitude: number | string | undefined;
+  longitude: number | string | undefined;
 }
 
 interface Location {

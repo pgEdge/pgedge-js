@@ -58,6 +58,15 @@ function getClientConfig(node: DatabaseNode, opts?: ClientConfig): ClientConfig 
   };
 }
 
+function getNumber(value: number | string | undefined, defaultValue: number): number {
+  if (typeof value === 'number') {
+    return value;
+  } else if (typeof value === 'string') {
+    return parseFloat(value);
+  }
+  return defaultValue;
+}
+
 export interface BaseConnectOptions {
   location?: LocationSpec;
 }
@@ -86,18 +95,9 @@ async function connect(opts: ConnectOptions): Promise<Client> {
   }
   let node = nodes[0];
   if (opts.location) {
-    let latitude = 0.0;
-    let longitude = 0.0;
-    if (typeof opts.location.latitude === 'string') {
-      latitude = parseFloat(opts.location.latitude);
-    } else {
-      latitude = opts.location.latitude;
-    }
-    if (typeof opts.location.longitude === 'string') {
-      longitude = parseFloat(opts.location.longitude);
-    } else {
-      longitude = opts.location.longitude;
-    }
+    // 38.88, -77.04 is Washington, DC, i.e. default to the us-east-1 area
+    const latitude = getNumber(opts.location.latitude, 38.88);
+    const longitude = getNumber(opts.location.longitude, -77.04);
     node = getClosestNode(nodes, { latitude, longitude });
   }
   const config = getClientConfig(node);
