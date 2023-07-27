@@ -1,5 +1,5 @@
 {
-  "name": "pgedge",
+  "name": "@pgedge/pgedge",
   "version": "0.0.1",
   "description": "Javascript and Typescript library for pgEdge",
   "main": "lib/index.js",
@@ -49,5 +49,8 @@
   "homepage": "https://github.com/pgEdge/pgedge-js",
   "dependencies": {
     "pg": "^8.11.1"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
