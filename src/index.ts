@@ -36,7 +36,7 @@ function getClosestNode(nodes: DatabaseNode[], location: Location): DatabaseNode
   }
   let closestNode: DatabaseNode = nodes[0];
   let closestDistance = haversineDistance(location, closestNode.location);
-  for (let node of nodes.slice(1)) {
+  for (const node of nodes.slice(1)) {
     const distance = haversineDistance(location, node.location);
     if (distance < closestDistance) {
       closestNode = node;
@@ -60,7 +60,7 @@ function getClientConfig(node: DatabaseNode, opts?: ClientConfig): ClientConfig 
 
 async function connect(request: Request, env: Env): Promise<Client> {
   const nodes = getNodes(env);
-  var node = nodes[0];
+  let node = nodes[0];
   if (request.cf && request.cf.latitude && request.cf.longitude) {
     node = getClosestNode(nodes, {
       latitude: parseFloat(request.cf.latitude as string),
