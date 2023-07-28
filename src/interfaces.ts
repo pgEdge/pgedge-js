@@ -41,6 +41,7 @@ interface Env {
   PGEDGE_NODES: string;
   PGEDGE_CLUSTER_ID?: string;
   PGEDGE_LATENCY_MEASUREMENT_ENDPOINT?: string;
+  PGEDGE_LATENCY_MEASUREMENT_SAMPLE_RATE?: number | string;
 }
 
 export { Region, Connection, Geolocation, GeolocationSpec, DatabaseNode, Env };

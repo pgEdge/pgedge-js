@@ -82,13 +82,6 @@ interface BaseConnectOptions {
 
   // Additional configuration passed to the Postgres client.
   config?: ClientConfig;
-
-  // Determines whether a select latency measurement will be taken.
-  // If set to a number between 0 and 1, the measurement will be taken
-  // for that percentage of requests. If set to one or greater, a measurement
-  // will be taken on every request. If set to zero or less, no measurement
-  // will be taken.
-  measureLatency?: number;
 }
 
 // Builds an object containing location information for the given request.
@@ -202,17 +195,16 @@ async function connect(opts: ConnectOptions): Promise<Client> {
   await client.connect();
 
   // Measure latency if opted in
-  if (opts.measureLatency && Math.random() < opts.measureLatency) {
-    if ('env' in opts) {
-      const endpoint = getLatencyMeasurementEndpoint(opts.env);
-      if (endpoint) {
-        const locData = getLocationData(latitude, longitude, opts.request);
-        const meta: Record<string, any> = {};
-        if (opts.request?.cf) {
-          meta.cf_ray = opts.request.headers.get('cf-ray');
-        }
-        await sendLatencyMeasurement(endpoint, client, node, locData, meta);
+  if ('env' in opts && opts.env.PGEDGE_LATENCY_MEASUREMENT_SAMPLE_RATE) {
+    const sampleRate = getNumber(opts.env.PGEDGE_LATENCY_MEASUREMENT_SAMPLE_RATE, 0);
+    const endpoint = getLatencyMeasurementEndpoint(opts.env);
+    if (endpoint && Math.random() < sampleRate) {
+      const locData = getLocationData(latitude, longitude, opts.request);
+      const meta: Record<string, any> = {};
+      if (opts.request?.cf) {
+        meta.cf_ray = opts.request.headers.get('cf-ray');
       }
+      await sendLatencyMeasurement(endpoint, client, node, locData, meta);
     }
   }
   return client;
