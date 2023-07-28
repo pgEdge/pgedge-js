@@ -107,6 +107,49 @@ function getLocationData(latitude: number, longitude: number, request: any): Rec
   return data;
 }
 
+// Determine where latency measurements should be sent, if at all.
+function getLatencyMeasurementEndpoint(env: Env): string {
+  if (env.PGEDGE_LATENCY_MEASUREMENT_ENDPOINT) {
+    return env.PGEDGE_LATENCY_MEASUREMENT_ENDPOINT;
+  } else if (env.PGEDGE_CLUSTER_ID) {
+    return `https://api.pgedge.com/clusters/${env.PGEDGE_CLUSTER_ID}/views/latency-measurements`;
+  }
+  return '';
+}
+
+async function sendLatencyMeasurement(
+  endpoint: string,
+  client: Client,
+  node: DatabaseNode,
+  locData: Record<string, any>,
+  meta: Record<string, any>,
+) {
+  const startDate = new Date();
+  const start = startDate.getTime();
+  const query = 'SELECT NOW()';
+  const result = await client.query(query);
+  const end = Date.now();
+  const latency = (end - start) / 1000;
+  meta.query = query;
+  meta.result = null;
+  if (result.rows.length === 1) {
+    meta.result = new Date(result.rows[0].now).toISOString();
+  }
+  await fetch(endpoint, {
+    method: 'POST',
+    body: JSON.stringify([
+      {
+        node_id: node.id,
+        value: latency,
+        time: startDate.toISOString(),
+        location: locData,
+        source: 'pgedge-js',
+        meta,
+      },
+    ]),
+  });
+}
+
 interface EnvironmentConnectOptions extends BaseConnectOptions {
   // Environment variables that contain information on database nodes
   env: Env;
@@ -160,33 +203,15 @@ async function connect(opts: ConnectOptions): Promise<Client> {
 
   // Measure latency if opted in
   if (opts.measureLatency && Math.random() < opts.measureLatency) {
-    const startDate = new Date();
-    const start = startDate.getTime();
-    const query = 'SELECT NOW()';
-    const result = await client.query(query);
-    const end = Date.now();
-    const latency = (end - start) / 1000;
     if ('env' in opts) {
-      const endpoint = opts.env.PGEDGE_LATENCY_MEASUREMENT_ENDPOINT;
+      const endpoint = getLatencyMeasurementEndpoint(opts.env);
       if (endpoint) {
-        const meta: Record<string, any> = {
-          query,
-          result: result.rows.length === 1 ? result.rows[0].now : null,
-        };
+        const locData = getLocationData(latitude, longitude, opts.request);
+        const meta: Record<string, any> = {};
         if (opts.request?.cf) {
           meta.cf_ray = opts.request.headers.get('cf-ray');
         }
-        await fetch(endpoint, {
-          method: 'POST',
-          body: JSON.stringify({
-            node_id: node.id,
-            value: latency,
-            time: startDate.toISOString(),
-            location: getLocationData(latitude, longitude, opts.request),
-            source: 'pgedge-js',
-            meta,
-          }),
-        });
+        await sendLatencyMeasurement(endpoint, client, node, locData, meta);
       }
     }
   }

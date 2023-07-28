@@ -39,6 +39,7 @@ interface DatabaseNode {
 
 interface Env {
   PGEDGE_NODES: string;
+  PGEDGE_CLUSTER_ID?: string;
   PGEDGE_LATENCY_MEASUREMENT_ENDPOINT?: string;
 }
 
