@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { Client, ClientConfig } from 'pg';
 import { Region, Connection, Geolocation, GeolocationSpec, DatabaseNode, Env } from './interfaces';
 
@@ -173,13 +172,16 @@ async function connect(opts: ConnectOptions): Promise<Client> {
         if (opts.request?.cf) {
           meta.cf_ray = opts.request.headers.get('cf-ray');
         }
-        await axios.post(endpoint, {
-          node_id: node.id,
-          value: latency,
-          time: startDate.toISOString(),
-          location: getLocationData(latitude, longitude, opts.request),
-          source: 'pgedge-js',
-          meta,
+        await fetch(endpoint, {
+          method: 'POST',
+          body: JSON.stringify({
+            node_id: node.id,
+            value: latency,
+            time: startDate.toISOString(),
+            location: getLocationData(latitude, longitude, opts.request),
+            source: 'pgedge-js',
+            meta,
+          }),
         });
       }
     }
