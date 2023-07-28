@@ -1,11 +1,11 @@
 import { Client, ClientConfig } from 'pg';
-import { Region, Connection, Location, LocationSpec, DatabaseNode, Env } from './interfaces';
+import { Region, Connection, Geolocation, GeolocationSpec, DatabaseNode, Env } from './interfaces';
 
 function radians(degrees: number): number {
   return degrees * (Math.PI / 180);
 }
 
-function haversineDistance(a: Location, b: Location): number {
+function haversineDistance(a: Geolocation, b: Geolocation): number {
   const r = 6371.0; // radius of the earth in km
   const dLat = radians(b.latitude - a.latitude);
   const dLon = radians(b.longitude - a.longitude);
@@ -30,7 +30,7 @@ function getNodes(env: Env): DatabaseNode[] {
   return nodes;
 }
 
-function getClosestNode(nodes: DatabaseNode[], location: Location): DatabaseNode {
+function getClosestNode(nodes: DatabaseNode[], location: Geolocation): DatabaseNode {
   if (nodes.length === 0) {
     throw new Error('No nodes provided');
   }
@@ -46,10 +46,10 @@ function getClosestNode(nodes: DatabaseNode[], location: Location): DatabaseNode
   return closestNode;
 }
 
-function getClientConfig(node: DatabaseNode, opts?: ClientConfig): ClientConfig {
+function getClientConfig(node: DatabaseNode, config?: ClientConfig): ClientConfig {
   const conn = node.connection;
   return {
-    ...(opts || {}),
+    ...(config || {}),
     host: conn.host,
     port: conn.port,
     user: conn.username,
@@ -67,22 +67,38 @@ function getNumber(value: number | string | undefined | unknown, defaultValue: n
   return defaultValue;
 }
 
-export interface BaseConnectOptions {
-  location?: LocationSpec;
+// 38.88, -77.04 is Washington, DC, i.e. default to the us-east-1 area
+const defaultLocation: Geolocation = {
+  latitude: 38.88,
+  longitude: -77.04,
+};
+
+interface BaseConnectOptions {
+  // Geolocation of the client that is connecting
+  location?: GeolocationSpec;
+
+  // The request that is being handled
   request?: any;
+
+  // Additional configuration passed to the Postgres client
+  config?: ClientConfig;
 }
 
-export interface EnvironmentConnectOptions extends BaseConnectOptions {
+interface EnvironmentConnectOptions extends BaseConnectOptions {
+  // Environment variables that contain information on database nodes
   env: Env;
 }
 
-export interface NodesConnectOptions extends BaseConnectOptions {
+interface NodesConnectOptions extends BaseConnectOptions {
+  // Explicitly provided database node information
   nodes: DatabaseNode[];
 }
 
-export type ConnectOptions = EnvironmentConnectOptions | NodesConnectOptions;
+// Options used when connected to a pgEdge database cluster
+type ConnectOptions = EnvironmentConnectOptions | NodesConnectOptions;
 
 async function connect(opts: ConnectOptions): Promise<Client> {
+  // Retrieve information about the available database nodes
   let nodes: DatabaseNode[] = [];
   if ('env' in opts) {
     nodes = getNodes(opts.env);
@@ -91,21 +107,31 @@ async function connect(opts: ConnectOptions): Promise<Client> {
   } else {
     throw new Error('invalid options: env or nodes must be provided');
   }
+
+  // There must be at least one node in order for us to connect
   if (!Array.isArray(nodes) || nodes.length === 0) {
     throw new Error('invalid options: at least one node must be provided');
   }
-  // 38.88, -77.04 is Washington, DC, i.e. default to the us-east-1 area
-  let latitude = 38.88;
-  let longitude = -77.04;
+
+  // Determine the latitude and longitude of the client that is connecting
+  let latitude: number;
+  let longitude: number;
   if (opts.location) {
-    latitude = getNumber(opts.location.latitude, 38.88);
-    longitude = getNumber(opts.location.longitude, -77.04);
+    latitude = getNumber(opts.location.latitude, defaultLocation.latitude);
+    longitude = getNumber(opts.location.longitude, defaultLocation.longitude);
   } else if (opts.request?.cf) {
-    latitude = getNumber(opts.request.cf.latitude, 38.88);
-    longitude = getNumber(opts.request.cf.longitude, -77.04);
+    latitude = getNumber(opts.request.cf.latitude, defaultLocation.latitude);
+    longitude = getNumber(opts.request.cf.longitude, defaultLocation.longitude);
+  } else {
+    latitude = defaultLocation.latitude;
+    longitude = defaultLocation.longitude;
   }
+
+  // Pick the node that is closest to this client
   const node = getClosestNode(nodes, { latitude, longitude });
-  const config = getClientConfig(node);
+
+  // Connect to the database node
+  const config = getClientConfig(node, opts.config ?? {});
   const client = new Client(config);
   await client.connect();
   return client;
@@ -117,10 +143,15 @@ export {
   getClosestNode,
   getClientConfig,
   haversineDistance,
+  BaseConnectOptions,
+  EnvironmentConnectOptions,
+  NodesConnectOptions,
+  ConnectOptions,
+  Client,
   Region,
   Connection,
-  Location,
-  LocationSpec,
+  Geolocation,
+  GeolocationSpec,
   DatabaseNode,
   Env,
 };

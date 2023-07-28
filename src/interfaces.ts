@@ -14,12 +14,12 @@ interface Connection {
   external_ip_address: string;
 }
 
-interface LocationSpec {
+interface GeolocationSpec {
   latitude: number | string | undefined | unknown;
   longitude: number | string | undefined | unknown;
 }
 
-interface Location {
+interface Geolocation {
   latitude: number;
   longitude: number;
 }
@@ -34,11 +34,11 @@ interface DatabaseNode {
   region_detail: Region;
   public_ip_address: string;
   connection: Connection;
-  location: Location;
+  location: Geolocation;
 }
 
 interface Env {
   PGEDGE_NODES: string;
 }
 
-export { Region, Connection, Location, LocationSpec, DatabaseNode, Env };
+export { Region, Connection, Geolocation, GeolocationSpec, DatabaseNode, Env };
