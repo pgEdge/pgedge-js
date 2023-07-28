@@ -39,6 +39,7 @@ interface DatabaseNode {
 
 interface Env {
   PGEDGE_NODES: string;
+  PGEDGE_LATENCY_MEASUREMENT_ENDPOINT?: string;
 }
 
 export { Region, Connection, Geolocation, GeolocationSpec, DatabaseNode, Env };

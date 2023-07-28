@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { Client, ClientConfig } from 'pg';
 import { Region, Connection, Geolocation, GeolocationSpec, DatabaseNode, Env } from './interfaces';
 
@@ -74,14 +75,37 @@ const defaultLocation: Geolocation = {
 };
 
 interface BaseConnectOptions {
-  // Geolocation of the client that is connecting
+  // Geolocation of the client that is connecting.
   location?: GeolocationSpec;
 
-  // The request that is being handled
+  // The request that is being handled.
   request?: any;
 
-  // Additional configuration passed to the Postgres client
+  // Additional configuration passed to the Postgres client.
   config?: ClientConfig;
+
+  // Determines whether a select latency measurement will be taken.
+  // If set to a number between 0 and 1, the measurement will be taken
+  // for that percentage of requests. If set to one or greater, a measurement
+  // will be taken on every request. If set to zero or less, no measurement
+  // will be taken.
+  measureLatency?: number;
+}
+
+// Builds an object containing location information for the given request.
+function getLocationData(latitude: number, longitude: number, request: any): Record<string, any> {
+  const data: Record<string, any> = { latitude, longitude };
+  if (request && request.cf) {
+    data.code = request.cf.colo;
+    data.country = request.cf.country;
+    data.is_eu_country = request.cf.isEUCountry;
+    data.city = request.cf.city;
+    data.metro_code = request.cf.metroCode;
+    data.postal_code = request.cf.postalCode;
+    data.region = request.cf.region;
+    data.region_code = request.cf.regionCode;
+  }
+  return data;
 }
 
 interface EnvironmentConnectOptions extends BaseConnectOptions {
@@ -134,6 +158,32 @@ async function connect(opts: ConnectOptions): Promise<Client> {
   const config = getClientConfig(node, opts.config ?? {});
   const client = new Client(config);
   await client.connect();
+
+  // Measure latency if opted in
+  if (opts.measureLatency && Math.random() < opts.measureLatency) {
+    const startDate = new Date();
+    const start = startDate.getTime();
+    await client.query('SELECT NOW()');
+    const end = Date.now();
+    const latency = end - start;
+    if ('env' in opts) {
+      const endpoint = opts.env.PGEDGE_LATENCY_MEASUREMENT_ENDPOINT;
+      if (endpoint) {
+        const meta: Record<string, any> = {};
+        if (opts.request?.cf) {
+          meta.cf_ray = opts.request.headers.get('cf-ray');
+        }
+        await axios.post(endpoint, {
+          node_id: node.id,
+          value: latency,
+          time: startDate.toISOString(),
+          location: getLocationData(latitude, longitude, opts.request),
+          source: 'pgedge-js',
+          meta,
+        });
+      }
+    }
+  }
   return client;
 }
 
