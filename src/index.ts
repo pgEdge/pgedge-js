@@ -176,7 +176,7 @@ async function connect(opts: ConnectOptions): Promise<Client> {
         if (opts.request?.cf) {
           meta.cf_ray = opts.request.headers.get('cf-ray');
         }
-        await fetch(endpoint, {
+        const response = await fetch(endpoint, {
           method: 'POST',
           body: JSON.stringify({
             node_id: node.id,
@@ -187,7 +187,7 @@ async function connect(opts: ConnectOptions): Promise<Client> {
             meta,
           }),
         });
-        console.log('latency measurement sent', meta);
+        console.log('latency measurement sent', meta, response.statusText);
       }
     }
   }
