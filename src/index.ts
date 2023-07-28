@@ -176,7 +176,7 @@ async function connect(opts: ConnectOptions): Promise<Client> {
         if (opts.request?.cf) {
           meta.cf_ray = opts.request.headers.get('cf-ray');
         }
-        const response = await endpoint.fetch({
+        const response = await fetch(endpoint, {
           method: 'POST',
           body: JSON.stringify({
             node_id: node.id,
