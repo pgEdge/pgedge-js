@@ -158,25 +158,25 @@ async function connect(opts: ConnectOptions): Promise<Client> {
   const client = new Client(config);
   await client.connect();
 
-  console.log('connected', opts, opts.measureLatency);
-
   // Measure latency if opted in
   if (opts.measureLatency && Math.random() < opts.measureLatency) {
     const startDate = new Date();
-    console.log('measuring latency', startDate, 'env' in opts);
     const start = startDate.getTime();
-    await client.query('SELECT NOW()');
+    const query = 'SELECT NOW()';
+    const result = await client.query(query);
     const end = Date.now();
-    const latency = end - start;
+    const latency = (end - start) / 1000;
     if ('env' in opts) {
       const endpoint = opts.env.PGEDGE_LATENCY_MEASUREMENT_ENDPOINT;
       if (endpoint) {
-        console.log('endpoint found', endpoint);
-        const meta: Record<string, any> = {};
+        const meta: Record<string, any> = {
+          query,
+          result: result.rows.length === 1 ? result.rows[0].now : null,
+        };
         if (opts.request?.cf) {
           meta.cf_ray = opts.request.headers.get('cf-ray');
         }
-        const response = await fetch(endpoint, {
+        await fetch(endpoint, {
           method: 'POST',
           body: JSON.stringify({
             node_id: node.id,
@@ -187,7 +187,6 @@ async function connect(opts: ConnectOptions): Promise<Client> {
             meta,
           }),
         });
-        console.log('latency measurement sent', meta, response.statusText);
       }
     }
   }

@@ -1,6 +1,6 @@
 {
   "name": "@pgedge/pgedge",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "Javascript and Typescript library for pgEdge",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
