@@ -130,16 +130,18 @@ async function sendLatencyMeasurement(
   }
   await fetch(endpoint, {
     method: 'POST',
-    body: JSON.stringify([
-      {
-        node_id: node.id,
-        value: latency,
-        time: startDate.toISOString(),
-        location: locData,
-        source: 'pgedge-js',
-        meta,
-      },
-    ]),
+    body: JSON.stringify({
+      items: [
+        {
+          node_id: node.id,
+          value: latency,
+          time: startDate.toISOString(),
+          location: locData,
+          source: 'pgedge-js',
+          meta,
+        },
+      ],
+    }),
   });
 }
 
