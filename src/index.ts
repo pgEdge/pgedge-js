@@ -128,21 +128,27 @@ async function sendLatencyMeasurement(
   if (result.rows.length === 1) {
     meta.result = new Date(result.rows[0].now).toISOString();
   }
-  await fetch(endpoint, {
-    method: 'POST',
-    body: JSON.stringify({
-      items: [
-        {
-          node_id: node.id,
-          value: latency,
-          time: startDate.toISOString(),
-          location: locData,
-          source: 'pgedge-js',
-          meta,
-        },
-      ],
-    }),
+  const body = JSON.stringify({
+    items: [
+      {
+        node_id: node.id,
+        value: latency,
+        time: startDate.toISOString(),
+        location: locData,
+        source: 'pgedge-js',
+        meta,
+      },
+    ],
   });
+  console.log('sending latency measurement', body);
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body,
+  });
+  console.log('API response:', response);
 }
 
 interface EnvironmentConnectOptions extends BaseConnectOptions {
